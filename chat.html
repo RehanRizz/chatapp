@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Live Chat</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body class="bg-slate-900 flex flex-col min-h-screen">
+  <header class="bg-slate-800 px-6 py-4 flex justify-between items-center">
+    <h1 class="text-xl font-semibold text-white">Live Chat</h1>
+    <div class="flex items-center gap-4">
+      <span class="text-sm text-slate-300">
+        Logged in as: <span class="font-medium">{{ username }}</span>
+      </span>
+      <a href="{{ url_for('logout') }}"
+         class="text-sm text-red-400 hover:text-red-300">
+        Logout
+      </a>
+    </div>
+  </header>
+
+  <main class="flex-1 flex flex-col items-center justify-center px-4 py-6">
+    <div class="w-full max-w-2xl bg-slate-800 rounded-xl shadow-lg flex flex-col h-[70vh]">
+      <div id="messages"
+           class="flex-1 overflow-y-auto p-4 space-y-2 text-sm bg-slate-900 rounded-t-xl">
+      </div>
+
+      <form id="chat-form" class="flex border-t border-slate-700">
+        <input
+          id="message-input"
+          type="text"
+          class="flex-1 px-3 py-3 bg-slate-800 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-bl-xl"
+          placeholder="Type a message..."
+          autocomplete="off"
+        />
+        <button
+          type="submit"
+          class="px-5 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-br-xl"
+        >
+          Send
+        </button>
+      </form>
+    </div>
+  </main>
+
+  <script>
+    const socket = io();
+
+    const messagesEl = document.getElementById("messages");
+    const formEl = document.getElementById("chat-form");
+    const inputEl = document.getElementById("message-input");
+
+    function addMessage(text, type = "chat") {
+      const div = document.createElement("div");
+      div.className = type === "system"
+        ? "text-xs text-slate-400"
+        : "text-slate-100";
+      div.textContent = text;
+      messagesEl.appendChild(div);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    socket.on("connect", () => {
+      addMessage("Connected to server.", "system");
+    });
+
+    socket.on("disconnect", () => {
+      addMessage("Disconnected from server.", "system");
+    });
+
+    socket.on("system_message", (data) => {
+      addMessage(data.msg, "system");
+    });
+
+    socket.on("chat_message", (data) => {
+      addMessage(`${data.user}: ${data.msg}`, "chat");
+    });
+
+    formEl.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const msg = inputEl.value.trim();
+      if (!msg) return;
+      socket.emit("chat_message", { msg });
+      inputEl.value = "";
+    });
+  </script>
+</body>
+</html>
